@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.8" type="plugin" group="system" method="upgrade">
+	<name>PLG_SYSTEM_NEWSLETTERLIGHT</name>
+	<author>Tobias Zulauf</author>
+	<creationDate>04/2018</creationDate>
+	<copyright>Copyright (C) 2018 Tobias Zulauf (jah-tz.de). All rights reserved.</copyright>
+	<license>http://www.gnu.org/copyleft/gpl.html</license>
+	<authorEmail>kontakt@jah-tz.de</authorEmail>
+	<authorUrl>www.jah-tz.de</authorUrl>
+	<version>1.0.0</version>
+	<description><![CDATA[PLG_SYSTEM_NEWSLETTERLIGHT_XML_DESCRIPTION]]></description>
+	<scriptfile>script.php</scriptfile>
+	<files>
+		<filename plugin="newsletterlight">newsletterlight.php</filename>
+		<folder>language</folder>
+	</files>
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field
+					name="article_frontend"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="1"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_FRONTEND_ARTICLE"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_FRONTEND_ARTICLE_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="article_backend"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="0"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_ARTICLE_BACKEND"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_ARTICLE_BACKEND_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="mailto_usergroup"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="1"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="usergroup"
+					type="usergrouplist"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUPS"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUPS_DESC"
+					multiple="false"
+					size="10"
+				/>
+
+				<field
+					name="mailto_admins"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="1"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="mailto_custom"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="0"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_CUSTOM"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_CUSTOM_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="custom_emails"
+					showon="mailto_custom:1"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DESC"
+				/>
+
+				<field
+					name="mail_unsubscribe"
+					class="btn-group btn-group-yesno"
+					type="radio"
+					default="0"
+					filter="integer"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAIL_UNSUBSCRIBE"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAIL_UNSUBSCRIBE_DESC"
+				>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+
+				<field
+					name="unsubscribe_emails"
+					showon="mail_unsubscribe:1"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DESC"
+				/>
+			</fieldset>
+
+			<fieldset name="Emails">
+				<!-- Emails -->
+				<field
+					name="newslettersubject"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DESC"
+				/>
+
+				<field
+					name="newsletterbody"
+					class="span12"
+					type="textarea"
+					rows="7"
+					cols="40"
+					filter="raw"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DESC"
+				/>
+
+				<field
+					name="unsubsribedsubject"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DESC"
+				/>
+
+				<field
+					name="unsubsribedbody"
+					class="span12"
+					type="textarea"
+					rows="7"
+					cols="40"
+					filter="raw"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DESC"
+				/>
+
+				<field
+					name="unsubsribedadminsubject"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN_DESC"
+				/>
+
+				<field
+					name="unsubsribedadminbody"
+					class="span12"
+					type="textarea"
+					rows="7"
+					cols="40"
+					filter="raw"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DESC"
+				/>
+			</fieldset>
+		</fields>
+	</config>
+	<updateservers>
+		<server type="extension" name="NewsletterLight Updates">https://raw.githubusercontent.com/zero-24/plg_system_newsletterlight/master/update.xml</server>
+	</updateservers>
+</extension>
