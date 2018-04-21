@@ -47,10 +47,10 @@
 					name="mailto_usergroup"
 					class="btn-group btn-group-yesno"
 					type="radio"
-					default="1"
+					default="0"
 					filter="integer"
-					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS"
-					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_ADMINS_DESC"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUP"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUP_DESC"
 				>
 					<option value="1">JYES</option>
 					<option value="0">JNO</option>
@@ -61,6 +61,7 @@
 					type="usergrouplist"
 					label="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUPS"
 					description="PLG_SYSTEM_NEWSLETTERLIGHT_MAILTO_USERGROUPS_DESC"
+					showon="mailto_usergroup:1"
 					multiple="false"
 					size="10"
 				/>
@@ -124,12 +125,12 @@
 					type="text"
 					filter="text"
 					hint="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DEFAULT"
-					label="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL"
-					description="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_DESC"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_UNSUBSCRIBE"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_CUSTOM_EMAIL_UNSUBSCRIBE_DESC"
 				/>
 			</fieldset>
 
-			<fieldset name="Emails">
+			<fieldset name="mailtemplates">
 				<!-- Emails -->
 				<field
 					name="newslettersubject"

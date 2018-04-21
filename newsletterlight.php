@@ -146,8 +146,18 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function sendMailUserUnsubscribed($userId)
 	{
 		// Send Mail to the user that unsubscribed
-		$unsubscribedSubjectUser = $this->getUnsubsribedSubject();
-		$unsubscribedBodyUser    = $this->getUnsubsribedBody();
+		$unsubscribedSubjectUser = $this->computeSubject(
+			$this->params->get(
+				'unsubsribedsubject',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DEFAULT')
+			)
+		);
+		$unsubscribedBodyUser    = $this->computeBody(
+			$this->params->get(
+				'unsubsribedbody',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')
+			)
+		);
 
 		$sent = $this->sendMail($unsubscribedSubjectUser, $unsubscribedBodyUser, Factory::getUser($userId)->email);
 
@@ -166,8 +176,18 @@ class PlgSystemNewsletterLight extends JPlugin
 		}
 
 		$unsubscribeAdminEmails   = (array) explode(';', $this->params->get('unsubscribe_emails', array()));
-		$unsubscribedSubjectAdmin = $this->getUnsubsribedAdminSubject();
-		$unsubscribedBodyAdmin    = $this->getUnsubsribedAdminBody();
+		$unsubscribedSubjectAdmin = $this->computeSubject(
+			$this->params->get(
+				'unsubsribedadminsubject',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN_DEFAULT')
+			)
+		);
+		$unsubscribedBodyAdmin = $this->computeBody(
+			$this->params->get(
+				'unsubsribedadminbody',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DEFAULT')
+			)
+		);
 
 		// Send the emails to the Super Users
 		foreach ($unsubscribeAdminEmails as $recipient)
@@ -257,9 +277,20 @@ class PlgSystemNewsletterLight extends JPlugin
 		// Set article for future usage
 		$this->article = $article;
 
-		$emailSubject = $this->getNewsletterSubject();
-		$emailBody    = $this->getNewsletterBody();
-		$recipients   = $this->getNewsletterRecipients();
+		$emailSubject = $this->computeSubject(
+			$this->params->get(
+				'newslettersubject',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DEFAULT')
+			)
+		);
+		$emailBody = $this->computeBody(
+			$this->params->get(
+				'newsletterbody',
+				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DEFAULT')
+			)
+		);
+
+		$recipients = $this->getNewsletterRecipients();
 
 		// Send the emails to the Super Users
 		foreach ($recipients as $recipient)
@@ -285,9 +316,9 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	private function getNewsletterRecipients()
 	{
-		$adminMails   = arrray();
-		$customEmails = arrray();
-		$groupEmails  = arrray();
+		$adminMails   = array();
+		$customEmails = array();
+		$groupEmails  = array();
 
 		// Catch email to users there have systememail enabled
 		if ((int) $this->params->get('mailto_admins') === 1)
@@ -296,7 +327,7 @@ class PlgSystemNewsletterLight extends JPlugin
 			$query = $this->db->getQuery(true)
 				->select($this->db->quoteName('email'))
 				->from($this->db->quoteName('#__users'))
-				->where($this->db->quoteName('sendEmail') . " = " . 1);
+				->where($this->db->quoteName('sendEmail') . " = " . $this->db->quote('1'));
 			$this->db->setQuery($query);
 
 			$adminMails = (array) $this->db->loadColumn();
@@ -313,12 +344,20 @@ class PlgSystemNewsletterLight extends JPlugin
 		{
 			if (!$this->mailtoUsergroupId === false)
 			{
-				$groupEmails = Access::getUsersByGroup($this->mailtoUsergroupId);
+				$mailtoUsergroupIdUsers = Access::getUsersByGroup($this->mailtoUsergroupId);
+				$query = $this->db->getQuery(true)
+					->select($this->db->quoteName('email'))
+					->from($this->db->quoteName('#__users'))
+					->where($this->db->quoteName('id') . ' IN (' . implode(',', $mailtoUsergroupIdUsers) . ')')
+					->where($this->db->quoteName('block') . ' = ' . $this->db->quote('0'));
+				$this->db->setQuery($query);
+
+				$mailtoUsergroupEmails = (array) $this->db->loadColumn();
 			}
 		}
 
 		// Merge all the mails & retrun the unique mails
-		return array_unique(array_merge($adminMails, $customEmails, $groupEmails));
+		return array_unique(array_merge($adminMails, $customEmails, $mailtoUsergroupEmails));
 	}
 
 	/**
@@ -333,9 +372,13 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function computeSubject($subject)
 	{
 		$messagePlaceholders = array(
-			'[TITLE]' => $this->article->title,
 			'[URL]'   => Uri::base(),
 		);
+
+		if (isset($this->article->title))
+		{
+			$messagePlaceholders['[TITLE]'] = $this->article->title;
+		}
 
 		foreach ($messagePlaceholders as $key => $value)
 		{
@@ -356,37 +399,44 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	private function computeBody($body)
 	{
-		$category = $this->db->getQuery(true)
-			->select($this->db->quoteName('title'))
-			->from($this->db->quoteName('#__categories'))
-			->where($this->db->quoteName('id') . " = " . $this->db->quote($this->article->catid));
-		$this->db->setQuery($category);
-
-		$categoryName = $this->db->loadResult();
-		$introtext    = str_replace('<br>', '<br />', $this->article->introtext);
-		$fulltext     = str_replace('<br>', '<br />', $this->article->fulltext);
-
-		// Define article introtext and fulltext
-		if ($fulltext === '')
-		{
-			$fulltext = $introtext;
-		}
-		else
-		{
-			$fulltext = $introtext . '<br>' . $fulltext;
-		}
-
+		// Set the default placeholders
 		$messagePlaceholders = array(
 			'[USERNAME]'        => $this->user->get('username'),
-			'[CATEGORY]'        => $categoryName,
-			'[TITLE]'           => $this->article->title,
-			'[INTROTEXT]'       => $introtext,
-			'[FULLTEXT]'        => $fulltext,
-			'[LINK]'            => Uri::root() . Route::_('index.php?option=com_content&view=article&id=' . $this->article->id),
 			'[URL]'             => Uri::base(),
-			'[UNSUBSCRIBE-URL]' => Uri::base() . '?unsubscribe=1&userid=' . $this->user->id,
 			'\\n'               => "\n",
 		);
+
+		// Only if we have the article object we can do something with it ;)
+		if (isset($this->article))
+		{
+			$category = $this->db->getQuery(true)
+				->select($this->db->quoteName('title'))
+				->from($this->db->quoteName('#__categories'))
+				->where($this->db->quoteName('id') . " = " . $this->db->quote($this->article->catid));
+			$this->db->setQuery($category);
+
+			$categoryName = $this->db->loadResult();
+			$introtext    = str_replace('<br>', '<br />', $this->article->introtext);
+			$fulltext     = str_replace('<br>', '<br />', $this->article->fulltext);
+
+			// Define article introtext and fulltext
+			if ($fulltext === '')
+			{
+				$fulltext = $introtext;
+			}
+			else
+			{
+				$fulltext = $introtext . '<br>' . $fulltext;
+			}
+
+			// Add additonal Message Placeholders
+			$messagePlaceholders['[CATEGORY]']        = $categoryName;
+			$messagePlaceholders['[TITLE]']           = $this->article->title;
+			$messagePlaceholders['[INTROTEXT]']       = $introtext;
+			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
+			$messagePlaceholders['[LINK]']            = Uri::root() . Route::_('index.php?option=com_content&view=article&id=' . $this->article->id);
+			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = Uri::base() . '?unsubscribe=1&userid=' . $this->user->id;
+		}
 
 		foreach ($messagePlaceholders as $key => $value)
 		{
@@ -394,78 +444,6 @@ class PlgSystemNewsletterLight extends JPlugin
 		}
 
 		return $body;
-	}
-
-	/**
-	 * Get the newsletter subject
-	 *
-	 * @return  string  Return the newsletter subject
-	 *
-	 * @since   1.0
-	 */
-	private function getNewsletterSubject()
-	{
-		return $this->computeSubject($this->params->get('newslettersubject', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DEFAULT')));
-	}
-
-	/**
-	 * Get the newsletter body
-	 *
-	 * @return  string  Return the newsletter body
-	 *
-	 * @since   1.0
-	 */
-	private function getNewsletterBody()
-	{
-		return $this->computeBody($this->params->get('newsletterbody', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DEFAULT')));
-	}
-
-	/**
-	 * Get the Unsubsribed subject
-	 *
-	 * @return  string  Return the Unsubsribed subject
-	 *
-	 * @since   1.0
-	 */
-	private function getUnsubsribedSubject()
-	{
-		return $this->computeSubject($this->params->get('unsubsribedsubject', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DEFAULT')));
-	}
-
-	/**
-	 * Get the Unsubsribed body
-	 *
-	 * @return  string  Return the Unsubsribed body
-	 *
-	 * @since   1.0
-	 */
-	private function getUnsubsribedBody()
-	{
-		return $this->computeBody($this->params->get('unsubsribedbody', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')));
-	}
-
-	/**
-	 * Get the Unsubsribed subject
-	 *
-	 * @return  string  Return the Unsubsribed subject
-	 *
-	 * @since   1.0
-	 */
-	private function getUnsubsribedAdminSubject()
-	{
-		return $this->computeSubject($this->params->get('unsubsribedadminsubject', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN_DEFAULT')));
-	}
-
-	/**
-	 * Get the Unsubsribed body
-	 *
-	 * @return  string  Return the Unsubsribed body
-	 *
-	 * @since   1.0
-	 */
-	private function getUnsubsribedAdminBody()
-	{
-		return $this->computeBody($this->params->get('unsubsribedadminbody', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DEFAULT')));
 	}
 
 	/**
