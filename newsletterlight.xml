@@ -7,7 +7,7 @@
 	<license>http://www.gnu.org/copyleft/gpl.html</license>
 	<authorEmail>kontakt@jah-tz.de</authorEmail>
 	<authorUrl>www.jah-tz.de</authorUrl>
-	<version>1.0.0</version>
+	<version>0.0.1</version>
 	<description><![CDATA[PLG_SYSTEM_NEWSLETTERLIGHT_XML_DESCRIPTION]]></description>
 	<scriptfile>script.php</scriptfile>
 	<files>
