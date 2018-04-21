@@ -12,7 +12,6 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Access\Access;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Language\Text;
-use Joomla\CMS\Router\Router;
 
 /**
  * Plugin class for Http Header
@@ -86,11 +85,9 @@ class PlgSystemNewsletterLight extends JPlugin
 			$this->db = Factory::getDbo();
 		}
 
-		// Get the user object
-		$this->user = Factory::getUser();
-
-		// Set some options we need later
-		$this->mailtoUsergroupId = $this->params->get('usergroup', false);
+		// Get the user & uri object
+		$this->user       = Factory::getUser();
+		$this->currentUri = Uri::getInstance();
 
 		parent::__construct($subject, $config);
 	}
@@ -104,18 +101,21 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	public function onAfterRender()
 	{
-		$unsubscribe = (int) $this->app->input->get('unsubscribe', null, 'int');
-		$userId      = (int) $this->app->input->get('userid', null, 'int');
-
 		// Unauthenticated users can't use this
 		if ($this->user->guest)
 		{
 			return;
 		}
 
+		$unsubscribe = (int) $this->app->input->get('unsubscribe', null, 'int');
+		$userId      = (int) $this->app->input->get('userid', null, 'int');
+
 		// Only if unsubscribe && userID matches the unsubscribe should be done.
-		if ($unsubscribe === 1 && $userId === $this->user->id)
+		if ($unsubscribe === 1 && $userId === (int) $this->user->id)
 		{
+			// Set mailtoUsergroupId
+			$this->mailtoUsergroupId = $this->params->get('usergroup', false);
+
 			$return = $this->removeUserFromGroup($userId);
 
 			if ($return === true)
@@ -146,20 +146,21 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function sendMailUserUnsubscribed($userId)
 	{
 		// Send Mail to the user that unsubscribed
-		$unsubscribedSubjectUser = $this->computeSubject(
-			$this->params->get(
-				'unsubsribedsubject',
-				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DEFAULT')
-			)
+		$sent = $this->sendMail(
+			$this->computeSubject(
+				$this->params->get(
+					'unsubsribedsubject',
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_DEFAULT')
+				)
+			),
+			$this->computeBody(
+				$this->params->get(
+					'unsubsribedbody',
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')
+				)
+			),
+			Factory::getUser($userId)->email
 		);
-		$unsubscribedBodyUser    = $this->computeBody(
-			$this->params->get(
-				'unsubsribedbody',
-				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')
-			)
-		);
-
-		$sent = $this->sendMail($unsubscribedSubjectUser, $unsubscribedBodyUser, Factory::getUser($userId)->email);
 
 		if (!$sent)
 		{
@@ -192,7 +193,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		// Send the emails to the Super Users
 		foreach ($unsubscribeAdminEmails as $recipient)
 		{
-			$sent = $this->sendMail($emailSubject, $emailBody, $recipient);
+			$sent = $this->sendMail($unsubscribedSubjectAdmin, $unsubscribedBodyAdmin, $recipient);
 
 			if (!$sent)
 			{
@@ -274,8 +275,10 @@ class PlgSystemNewsletterLight extends JPlugin
 			return true;
 		}
 
-		// Set article for future usage
-		$this->article = $article;
+		// Set article && mailtoUsergroupId for future usage
+		$this->article = $article; 
+		$this->mailtoUsergroupId = $this->params->get('usergroup', false);
+		$ishtml = true;
 
 		$emailSubject = $this->computeSubject(
 			$this->params->get(
@@ -295,7 +298,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		// Send the emails to the Super Users
 		foreach ($recipients as $recipient)
 		{
-			$sent = $this->sendMail($emailSubject, $emailBody, $recipient);
+			$sent = $this->sendMail($emailSubject, $emailBody, $recipient, $ishtml);
 
 			if (!$sent)
 			{
@@ -316,9 +319,9 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	private function getNewsletterRecipients()
 	{
-		$adminMails   = array();
-		$customEmails = array();
-		$groupEmails  = array();
+		$adminMails             = array();
+		$customEmails           = array();
+		$mailtoUsergroupEmails  = array();
 
 		// Catch email to users there have systememail enabled
 		if ((int) $this->params->get('mailto_admins') === 1)
@@ -372,7 +375,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function computeSubject($subject)
 	{
 		$messagePlaceholders = array(
-			'[URL]'   => Uri::base(),
+			'[URL]'   => $this->currentUri->toString(array('host', 'port')),
 		);
 
 		if (isset($this->article->title))
@@ -402,7 +405,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		// Set the default placeholders
 		$messagePlaceholders = array(
 			'[USERNAME]'        => $this->user->get('username'),
-			'[URL]'             => Uri::base(),
+			'[URL]'             => $this->currentUri->toString(array('host', 'port')),
 			'\\n'               => "\n",
 		);
 
@@ -434,7 +437,7 @@ class PlgSystemNewsletterLight extends JPlugin
 			$messagePlaceholders['[TITLE]']           = $this->article->title;
 			$messagePlaceholders['[INTROTEXT]']       = $introtext;
 			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
-			$messagePlaceholders['[LINK]']            = Uri::root() . Route::_('index.php?option=com_content&view=article&id=' . $this->article->id);
+			$messagePlaceholders['[LINK]']            = Uri::base() . 'index.php?option=com_content&view=article&id=' . $this->article->id;
 			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = Uri::base() . '?unsubscribe=1&userid=' . $this->user->id;
 		}
 
@@ -456,9 +459,8 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function getReturnUri()
 	{
 		// Remove all url parameters we use so we redirect the user to back to the origin site.
-		$currentUri = Uri::getInstance();
-		$currentUri->delVar('unsubscribe');
-		$currentUri->delVar('userid');
+		$this->currentUri->delVar('unsubscribe');
+		$this->currentUri->delVar('userid');
 
 		return (string) $currentUri;
 	}
@@ -485,15 +487,16 @@ class PlgSystemNewsletterLight extends JPlugin
 	/**
 	 * Send the Mail
 	 *
-	 * @param   string  $subject  The email subject
-	 * @param   string  $body     The email body
-	 * @param   string  $email    The email the message should be send to
+	 * @param   string   $subject  The email subject
+	 * @param   string   $body     The email body
+	 * @param   string   $email    The email the message should be send to
+	 * @param   boolean  $ishtml   If true the mail is set in html mode
 	 *
 	 * @return  boolean  True if the mail send out succesfull else return false
 	 *
 	 * @since   1.0
 	 */
-	private function sendMail($emailSubject, $emailBody, $email)
+	private function sendMail($emailSubject, $emailBody, $email, $ishtml = false)
 	{
 		// Replace merge codes with their values
 		$mailFrom = Factory::getConfig()->get('mailfrom');
@@ -502,6 +505,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		try
 		{
 			$mailer = Factory::getMailer();
+			$mailer->isHtml($ishtml);
 			$mailer->setSender(array($mailFrom, $fromName));
 			$mailer->addRecipient($email);
 			$mailer->setSubject($emailSubject);
