@@ -108,10 +108,10 @@ class PlgSystemNewsletterLight extends JPlugin
 		}
 
 		$unsubscribe = (int) $this->app->input->get('unsubscribe', null, 'int');
-		$userId      = (int) $this->app->input->get('userid', null, 'int');
+		$userId      = (int) $this->user->id;
 
-		// Only if unsubscribe && userID matches the unsubscribe should be done.
-		if ($unsubscribe === 1 && $userId === (int) $this->user->id)
+		// The user want to unsubscribe
+		if ($unsubscribe === 1)
 		{
 			// Set mailtoUsergroupId
 			$this->mailtoUsergroupId = $this->params->get('usergroup', false);
@@ -375,7 +375,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function computeSubject($subject)
 	{
 		$messagePlaceholders = array(
-			'[URL]'   => $this->currentUri->toString(array('host', 'port')),
+			'[URL]' => $this->currentUri->toString(array('host', 'port')),
 		);
 
 		if (isset($this->article->title))
@@ -404,9 +404,9 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Set the default placeholders
 		$messagePlaceholders = array(
-			'[USERNAME]'        => $this->user->get('username'),
-			'[URL]'             => $this->currentUri->toString(array('host', 'port')),
-			'\\n'               => "\n",
+			'[USERNAME]' => $this->user->get('username'),
+			'[URL]'      => $this->currentUri->toString(array('host', 'port')),
+			'\\n'        => "\n",
 		);
 
 		// Only if we have the article object we can do something with it ;)
@@ -438,7 +438,7 @@ class PlgSystemNewsletterLight extends JPlugin
 			$messagePlaceholders['[INTROTEXT]']       = $introtext;
 			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
 			$messagePlaceholders['[LINK]']            = Uri::base() . 'index.php?option=com_content&view=article&id=' . $this->article->id;
-			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = Uri::base() . '?unsubscribe=1&userid=' . $this->user->id;
+			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = Uri::base() . '?unsubscribe=1';
 		}
 
 		foreach ($messagePlaceholders as $key => $value)
@@ -460,9 +460,8 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Remove all url parameters we use so we redirect the user to back to the origin site.
 		$this->currentUri->delVar('unsubscribe');
-		$this->currentUri->delVar('userid');
 
-		return (string) $currentUri;
+		return (string) $this->currentUri;
 	}
 
 	/**
