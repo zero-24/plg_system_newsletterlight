@@ -458,7 +458,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	private function getReturnUri()
 	{
-		// Remove all url parameters we use so we redirect the user to back to the origin site.
+		// Remove the url parameters we use so we redirect the user to back to the origin site.
 		$this->currentUri->delVar('unsubscribe');
 
 		return (string) $this->currentUri;
