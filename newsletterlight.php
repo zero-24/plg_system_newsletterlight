@@ -432,13 +432,15 @@ class PlgSystemNewsletterLight extends JPlugin
 				$fulltext = $introtext . '<br>' . $fulltext;
 			}
 
+			$frontendUrl = str_replace('administrator/', '', Uri::base());
+
 			// Add additonal Message Placeholders
 			$messagePlaceholders['[CATEGORY]']        = $categoryName;
 			$messagePlaceholders['[TITLE]']           = $this->article->title;
 			$messagePlaceholders['[INTROTEXT]']       = $introtext;
 			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
-			$messagePlaceholders['[LINK]']            = Uri::base() . 'index.php?option=com_content&view=article&id=' . $this->article->id;
-			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = Uri::base() . '?unsubscribe=1';
+			$messagePlaceholders['[LINK]']            = $frontendUrl . 'index.php?option=com_content&view=article&id=' . $this->article->id;
+			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = $frontendUrl . '?unsubscribe=1';
 		}
 
 		foreach ($messagePlaceholders as $key => $value)
