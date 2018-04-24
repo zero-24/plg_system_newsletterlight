@@ -101,18 +101,30 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	public function onAfterRender()
 	{
-		// Unauthenticated users can't use this
-		if ($this->user->guest)
+		$unsubscribe = (int) $this->app->input->get('unsubscribe', null, 'int');
+		$userId      = (int) $this->app->input->get('userid', null, 'int');
+		$token       = (string) $this->app->input->get('token', null, 'string');
+
+		if (!$userId)
 		{
 			return;
 		}
 
-		$unsubscribe = (int) $this->app->input->get('unsubscribe', null, 'int');
-		$userId      = (int) $this->user->id;
+		if (!$token)
+		{
+			return;
+		}
 
 		// The user want to unsubscribe
 		if ($unsubscribe === 1)
 		{
+			$return = $this->checkValidRequest($userId, $token);
+
+			if ($return === false)
+			{
+				return;
+			}
+
 			// Set mailtoUsergroupId
 			$this->mailtoUsergroupId = $this->params->get('usergroup', false);
 
@@ -137,7 +149,29 @@ class PlgSystemNewsletterLight extends JPlugin
 	/**
 	 * Send Mail to the unsubscribe Admin
 	 *
-	 * @param   integer  $userId The userId to assign the new group
+	 * @param   integer  $userId  The userId from the url
+	 * @param   string   $token   The token from the url
+	 *
+	 * @return  boolean  True if the mail was send
+	 *
+	 * @since   1.0
+	 */
+	private function checkValidRequest($userId, $token)
+	{
+		$databaseToken = $this->getUserProfileValue($userId);
+
+		if ($databaseToken === $token)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Send Mail to the unsubscribe Admin
+	 *
+	 * @param   integer  $userId The userId
 	 *
 	 * @return  boolean  True if the mail was send
 	 *
@@ -295,19 +329,64 @@ class PlgSystemNewsletterLight extends JPlugin
 
 		$recipients = $this->getNewsletterRecipients();
 
+		// Send the mails to the groups.
+		if (isset($recipients['usergroup']))
+		{
+			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['usergroup'], $ishtml);
+		}
+
+		if (isset($recipients['custom']))
+		{
+			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['custom'], $ishtml);
+		}
+
+		if (isset($recipients['admin']))
+		{
+			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['admin'], $ishtml);
+		}
+	}
+
+	/**
+	 * This method retruns one array containing all email recipients
+	 *
+	 * @param   string   $subject     The email subject
+	 * @param   string   $body        The email body
+	 * @param   string   $recipients  The recipients of the messages
+	 * @param   boolean  $ishtml      If true the mail is set in html mode
+	 *
+	 * @since   1.0
+	 */
+	private function sendMailtoRecipients($emailSubject, $emailBody, $recipients, $ishtml)
+	{
 		// Send the emails to the Super Users
 		foreach ($recipients as $recipient)
 		{
-			$sent = $this->sendMail($emailSubject, $emailBody, $recipient, $ishtml);
+			if (is_object($recipient))
+			{
+				$email  = $recipient->email;
+				$userId = $recipient->id;
+				$canUnsubscribe = true;
+			}
+			else
+			{
+				$email  = $recipient;
+				$userId = false;
+				$canUnsubscribe = false;
+			}
+
+			// The unsubscribe link is personalized
+			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId, $canUnsubscribe);
+
+			$sent = $this->sendMail($emailSubject, $emailBody, $email, $ishtml);
 
 			if (!$sent)
 			{
 				// Give the current user a message that the mail could not be send so he can contact the admin
 				$this->app->enqueueMessage(Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_ERROR_MAIL_NOT_SEND'), $this->getRedirectType(false));
 			}
-		}
 
-		return true;
+			return true;
+		}
 	}
 
 	/**
@@ -319,9 +398,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	private function getNewsletterRecipients()
 	{
-		$adminMails             = array();
-		$customEmails           = array();
-		$mailtoUsergroupEmails  = array();
+		$mailRecipients = array();
 
 		// Catch email to users there have systememail enabled
 		if ((int) $this->params->get('mailto_admins') === 1)
@@ -333,13 +410,13 @@ class PlgSystemNewsletterLight extends JPlugin
 				->where($this->db->quoteName('sendEmail') . " = " . $this->db->quote('1'));
 			$this->db->setQuery($query);
 
-			$adminMails = (array) $this->db->loadColumn();
+			$mailRecipients['admin'] = (array) $this->db->loadColumn();
 		}
 
 		// Catch email to custom addresses
 		if ((int) $this->params->get('mailto_custom') === 1)
 		{
-			$customEmails = (array) explode(';', $this->params->get('custom_emails', ''));
+			$mailRecipients['custom'] = (array) explode(';', $this->params->get('custom_emails', ''));
 		}
 
 		// Catch email based on usergroup
@@ -349,18 +426,120 @@ class PlgSystemNewsletterLight extends JPlugin
 			{
 				$mailtoUsergroupIdUsers = Access::getUsersByGroup($this->mailtoUsergroupId);
 				$query = $this->db->getQuery(true)
-					->select($this->db->quoteName('email'))
+					->select($this->db->quoteName(array('id' ,'email')))
 					->from($this->db->quoteName('#__users'))
 					->where($this->db->quoteName('id') . ' IN (' . implode(',', $mailtoUsergroupIdUsers) . ')')
 					->where($this->db->quoteName('block') . ' = ' . $this->db->quote('0'));
 				$this->db->setQuery($query);
 
-				$mailtoUsergroupEmails = (array) $this->db->loadColumn();
+				$mailRecipients['usergroup'] = $this->db->loadObjectList();
 			}
 		}
 
-		// Merge all the mails & retrun the unique mails
-		return array_unique(array_merge($adminMails, $customEmails, $mailtoUsergroupEmails));
+		// retrun the mail recipients
+		return $mailRecipients;
+	}
+
+	/**
+	 * Compute the unsubsecibe link
+	 *
+	 * @param   string   $body            The subject to compute
+	 * @param   integer  $userId          The subject to compute
+	 * @param   boolean  $canUnsubscribe  The user can unsubscibe
+	 *
+	 * @return  string  Return bopy with replaced unsubscribe link
+	 *
+	 * @since   1.0
+	 */
+	private function computeUnsubscribeLink($body, $userId, $canUnsubscribe)
+	{
+		if (!$canUnsubscribe)
+		{
+			return str_replace('[UNSUBSCRIBE-URL]', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE'), $body);
+		}
+		
+		$frontendUrl = str_replace('administrator/', '', Uri::base());
+		$token       = $this->getUserProfileValue($userId);
+
+		if ($token === false)
+		{
+			$token = JApplicationHelper::getHash(JUserHelper::genRandomPassword());
+			$this->setUserProfileValue($userId, $token);
+		}
+
+		$unsubscribeUrl = $frontendUrl . '?unsubscribe=1&userid=' . $userId . '&token=' . $token;
+
+		return str_replace('[UNSUBSCRIBE-URL]', $unsubscribeUrl, $body);
+	}
+
+	/**
+	 * Returns if there is a token set for the current user 
+	 *
+	 * @param   $userId  The userid you want to check on the database
+	 *
+	 * @return  mixed  The value if the key exists. False in any other case.
+	 *
+	 * @since   1.0
+	 */
+	private function getUserProfileValue($userId)
+	{
+		try
+		{
+			$query = $this->db->getQuery(true)
+				->select($this->db->qn('profile_value'))
+				->from($this->db->qn('#__user_profiles'))
+				->where($this->db->qn('user_id') . ' = ' . $userId)
+				->where($this->db->qn('profile_key') . ' = ' . $this->db->q('plg_system_newsletterlight_token'));
+			$this->db->setQuery($query);
+
+			$userProfileValue = $this->db->loadResult();
+		}
+		catch (\Exception $e)
+		{
+			// We can't do much about is at this place
+			return false;
+		}
+
+		if (!empty($userProfileValue))
+		{
+			return $userProfileValue;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Sets the Profile value for the given user to the given value 
+	 *
+	 * @param   $userId  The userid you want to check on the database
+	 *
+	 * @return  boolean  True on sucess or if the value already exists. False in any other case.
+	 *
+	 * @since   1.0
+	 */
+	private function setUserProfileValue($userId, $value)
+	{
+		try
+		{
+			$query = $this->db->getQuery(true)
+				->insert($this->db->qn('#__user_profiles'))
+				->columns(array($this->db->qn('user_id'), $this->db->qn('profile_key'), $this->db->qn('profile_value'), $this->db->qn('ordering')))
+				->values(
+						$this->db->q($userId) . ' , ' .
+						$this->db->q('plg_system_newsletterlight_token') . ' , ' .
+						$this->db->q($value) . ' , ' .
+						$this->db->q(0)
+				);
+			$this->db->setQuery($query);
+			$this->db->execute();
+		}
+		catch (\Exception $e)
+		{
+			// We can't do much about is at this place
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -440,7 +619,6 @@ class PlgSystemNewsletterLight extends JPlugin
 			$messagePlaceholders['[INTROTEXT]']       = $introtext;
 			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
 			$messagePlaceholders['[LINK]']            = $frontendUrl . 'index.php?option=com_content&view=article&id=' . $this->article->id;
-			$messagePlaceholders['[UNSUBSCRIBE-URL]'] = $frontendUrl . '?unsubscribe=1';
 		}
 
 		foreach ($messagePlaceholders as $key => $value)
@@ -462,6 +640,8 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Remove the url parameters we use so we redirect the user to back to the origin site.
 		$this->currentUri->delVar('unsubscribe');
+		$this->currentUri->delVar('userid');
+		$this->currentUri->delVar('token');
 
 		return (string) $this->currentUri;
 	}
