@@ -384,9 +384,9 @@ class PlgSystemNewsletterLight extends JPlugin
 				// Give the current user a message that the mail could not be send so he can contact the admin
 				$this->app->enqueueMessage(Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_ERROR_MAIL_NOT_SEND'), $this->getRedirectType(false));
 			}
-
-			return true;
 		}
+
+		return true;
 	}
 
 	/**
@@ -425,14 +425,18 @@ class PlgSystemNewsletterLight extends JPlugin
 			if (!$this->mailtoUsergroupId === false)
 			{
 				$mailtoUsergroupIdUsers = Access::getUsersByGroup($this->mailtoUsergroupId);
-				$query = $this->db->getQuery(true)
-					->select($this->db->quoteName(array('id' ,'email')))
-					->from($this->db->quoteName('#__users'))
-					->where($this->db->quoteName('id') . ' IN (' . implode(',', $mailtoUsergroupIdUsers) . ')')
-					->where($this->db->quoteName('block') . ' = ' . $this->db->quote('0'));
-				$this->db->setQuery($query);
 
-				$mailRecipients['usergroup'] = $this->db->loadObjectList();
+				if (is_array($mailtoUsergroupIdUsers))
+				{
+					$query = $this->db->getQuery(true)
+						->select($this->db->quoteName(array('id' ,'email')))
+						->from($this->db->quoteName('#__users'))
+						->where($this->db->quoteName('id') . ' IN (' . implode(',', $mailtoUsergroupIdUsers) . ')')
+						->where($this->db->quoteName('block') . ' = ' . $this->db->quote('0'));
+					$this->db->setQuery($query);
+
+					$mailRecipients['usergroup'] = $this->db->loadObjectList();
+				}
 			}
 		}
 
@@ -455,7 +459,14 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		if (!$canUnsubscribe)
 		{
-			return str_replace('[UNSUBSCRIBE-URL]', Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE'), $body);
+			return str_replace(
+				'[UNSUBSCRIBE-URL]',
+				$this->params->get(
+					'unabletounsubsribe',
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE')
+				),
+				$body
+			);
 		}
 		
 		$frontendUrl = str_replace('administrator/', '', Uri::base());
@@ -583,7 +594,8 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Set the default placeholders
 		$messagePlaceholders = array(
-			'[USERNAME]' => $this->user->get('username'),
+			'[USERNAME]' => $this->user->username,
+			'[NAME]'     => $this->user->name,
 			'[URL]'      => $this->currentUri->toString(array('host', 'port')),
 			'\\n'        => "\n",
 		);

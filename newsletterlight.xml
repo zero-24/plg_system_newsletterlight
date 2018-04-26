@@ -200,6 +200,16 @@
 					label="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN"
 					description="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DESC"
 				/>
+				<field
+					name="unabletounsubsribe"
+					size="40"
+					class="span12"
+					type="text"
+					filter="text"
+					hint="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DEFAULT"
+					label="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_LABEL"
+					description="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DESC"
+				/>
 			</fieldset>
 		</fields>
 	</config>
