@@ -207,7 +207,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		}
 
 		// Send Mail to the unsubscribe admin mail
-		if ((int) $this->params->get('mail_unsubscribe') === 0)
+		if ((int) $this->params->get('mail_unsubscribe', 0) === 0)
 		{
 			return true;
 		}
@@ -219,6 +219,7 @@ class PlgSystemNewsletterLight extends JPlugin
 				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_UNSUBSRCRIBED_ADMIN_DEFAULT')
 			)
 		);
+
 		$unsubscribedBodyAdmin = $this->computeBody(
 			$this->params->get(
 				'unsubsribedadminbody',
