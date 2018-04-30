@@ -202,10 +202,11 @@
 				/>
 				<field
 					name="unabletounsubsribe"
-					size="40"
 					class="span12"
-					type="text"
-					filter="text"
+					type="textarea"
+					rows="7"
+					cols="40"
+					filter="raw"
 					hint="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DEFAULT"
 					label="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_LABEL"
 					description="PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DESC"

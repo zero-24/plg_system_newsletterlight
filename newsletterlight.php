@@ -85,8 +85,7 @@ class PlgSystemNewsletterLight extends JPlugin
 			$this->db = Factory::getDbo();
 		}
 
-		// Get the user & uri object
-		$this->user       = Factory::getUser();
+		// Get the uri object
 		$this->currentUri = Uri::getInstance();
 
 		parent::__construct($subject, $config);
@@ -118,6 +117,9 @@ class PlgSystemNewsletterLight extends JPlugin
 		// The user want to unsubscribe
 		if ($unsubscribe === 1)
 		{
+			// Set the user object
+			$this->user = Factory::getUser($userId);
+
 			$return = $this->checkValidRequest($userId, $token);
 
 			if ($return === false)
@@ -178,7 +180,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	 * @since   1.0
 	 */
 	private function sendMailUserUnsubscribed($userId)
-	{
+	{	
 		// Send Mail to the user that unsubscribed
 		$sent = $this->sendMail(
 			$this->computeSubject(
@@ -310,53 +312,39 @@ class PlgSystemNewsletterLight extends JPlugin
 		}
 
 		// Set article && mailtoUsergroupId for future usage
-		$this->article = $article; 
+		$this->article           = $article; 
 		$this->mailtoUsergroupId = $this->params->get('usergroup', false);
+		$this->user              = Factory::getUser();
 		$ishtml = true;
-
-		$emailSubject = $this->computeSubject(
-			$this->params->get(
-				'newslettersubject',
-				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DEFAULT')
-			)
-		);
-		$emailBody = $this->computeBody(
-			$this->params->get(
-				'newsletterbody',
-				Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DEFAULT')
-			)
-		);
 
 		$recipients = $this->getNewsletterRecipients();
 
 		// Send the mails to the groups.
 		if (isset($recipients['usergroup']))
 		{
-			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['usergroup'], $ishtml);
+			$this->sendMailtoRecipients($recipients['usergroup'], $ishtml);
 		}
 
 		if (isset($recipients['custom']))
 		{
-			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['custom'], $ishtml);
+			$this->sendMailtoRecipients($recipients['custom'], $ishtml);
 		}
 
 		if (isset($recipients['admin']))
 		{
-			$this->sendMailtoRecipients($emailSubject, $emailBody, $recipients['admin'], $ishtml);
+			$this->sendMailtoRecipients($recipients['admin'], $ishtml);
 		}
 	}
 
 	/**
 	 * This method retruns one array containing all email recipients
 	 *
-	 * @param   string   $subject     The email subject
-	 * @param   string   $body        The email body
-	 * @param   string   $recipients  The recipients of the messages
+	 * @param   array    $recipients  The recipients of the messages
 	 * @param   boolean  $ishtml      If true the mail is set in html mode
 	 *
 	 * @since   1.0
 	 */
-	private function sendMailtoRecipients($emailSubject, $emailBody, $recipients, $ishtml)
+	private function sendMailtoRecipients($recipients, $ishtml)
 	{
 		// Send the emails to the Super Users
 		foreach ($recipients as $recipient)
@@ -366,6 +354,9 @@ class PlgSystemNewsletterLight extends JPlugin
 				$email  = $recipient->email;
 				$userId = $recipient->id;
 				$canUnsubscribe = true;
+
+				// Set the receiver User
+				$this->receiveruser = Factory::getUser($userId);
 			}
 			else
 			{
@@ -374,7 +365,20 @@ class PlgSystemNewsletterLight extends JPlugin
 				$canUnsubscribe = false;
 			}
 
-			// The unsubscribe link is personalized
+			$emailSubject = $this->computeSubject(
+				$this->params->get(
+					'newslettersubject',
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_SUBJECT_NEWSLETTER_DEFAULT')
+				)
+			);
+
+			$emailBody = $this->computeBody(
+				$this->params->get(
+					'newsletterbody',
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_NEWSLETTER_DEFAULT')
+				)
+			);
+
 			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId, $canUnsubscribe);
 
 			$sent = $this->sendMail($emailSubject, $emailBody, $email, $ishtml);
@@ -463,7 +467,7 @@ class PlgSystemNewsletterLight extends JPlugin
 				'[UNSUBSCRIBE-URL]',
 				$this->params->get(
 					'unabletounsubsribe',
-					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE')
+					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DEFAULT')
 				),
 				$body
 			);
@@ -594,11 +598,18 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Set the default placeholders
 		$messagePlaceholders = array(
-			'[USERNAME]' => $this->user->username,
-			'[NAME]'     => $this->user->name,
-			'[URL]'      => $this->currentUri->toString(array('host', 'port')),
-			'\\n'        => "\n",
+			'[USERNAME]'          => $this->user->username,
+			'[NAME]'              => $this->user->name,
+			'[URL]'               => $this->currentUri->toString(array('host', 'port')),
+			'\\n'                 => "\n",
 		);
+
+		// Check the receiver user
+		if (isset($this->receiveruser))
+		{
+			$messagePlaceholders['[RECEIVER-USERNAME]'] = $this->receiveruser->username;
+			$messagePlaceholders['[RECEIVER-NAME]']     = $this->receiveruser->name;
+		}
 
 		// Only if we have the article object we can do something with it ;)
 		if (isset($this->article))
@@ -626,11 +637,11 @@ class PlgSystemNewsletterLight extends JPlugin
 			$frontendUrl = str_replace('administrator/', '', Uri::base());
 
 			// Add additonal Message Placeholders
-			$messagePlaceholders['[CATEGORY]']        = $categoryName;
-			$messagePlaceholders['[TITLE]']           = $this->article->title;
-			$messagePlaceholders['[INTROTEXT]']       = $introtext;
-			$messagePlaceholders['[FULLTEXT]']        = $fulltext;
-			$messagePlaceholders['[LINK]']            = $frontendUrl . 'index.php?option=com_content&view=article&id=' . $this->article->id;
+			$messagePlaceholders['[CATEGORY]']  = $categoryName;
+			$messagePlaceholders['[TITLE]']     = $this->article->title;
+			$messagePlaceholders['[INTROTEXT]'] = $introtext;
+			$messagePlaceholders['[FULLTEXT]']  = $fulltext;
+			$messagePlaceholders['[LINK]']      = $frontendUrl . 'index.php?option=com_content&view=article&id=' . $this->article->id;
 		}
 
 		foreach ($messagePlaceholders as $key => $value)
