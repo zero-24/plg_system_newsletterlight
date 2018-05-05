@@ -201,7 +201,7 @@
 					description="PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_ADMIN_DESC"
 				/>
 				<field
-					name="unabletounsubsribe"
+					name="unabletounsubsribebody"
 					class="span12"
 					type="textarea"
 					rows="7"

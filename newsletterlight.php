@@ -380,7 +380,18 @@ class PlgSystemNewsletterLight extends JPlugin
 				)
 			);
 
-			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId, $canUnsubscribe);
+			// Overwirte the body with the other text if the user can't unsubscribe
+			if (!$canUnsubscribe)
+			{
+				$emailBody = $this->computeBody(
+					$this->params->get(
+						'unabletounsubsribebody',
+						Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DEFAULT')
+					)
+				);
+			}
+
+			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId);
 
 			$sent = $this->sendMail($emailSubject, $emailBody, $email, $ishtml);
 
@@ -452,28 +463,16 @@ class PlgSystemNewsletterLight extends JPlugin
 	/**
 	 * Compute the unsubsecibe link
 	 *
-	 * @param   string   $body            The subject to compute
-	 * @param   integer  $userId          The subject to compute
-	 * @param   boolean  $canUnsubscribe  The user can unsubscibe
+	 * @param   string   $body    The subject to compute
+	 * @param   integer  $userId  The subject to compute
 	 *
 	 * @return  string  Return bopy with replaced unsubscribe link
 	 *
 	 * @since   1.0
 	 */
-	private function computeUnsubscribeLink($body, $userId, $canUnsubscribe)
+	private function computeUnsubscribeLink($body, $userId)
 	{
-		if (!$canUnsubscribe)
-		{
-			return str_replace(
-				'[UNSUBSCRIBE-URL]',
-				$this->params->get(
-					'unabletounsubsribe',
-					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_NO_UNSUBSCRIBE_POSSIBLE_DEFAULT')
-				),
-				$body
-			);
-		}
-		
+	
 		$frontendUrl = str_replace('administrator/', '', Uri::base());
 		$token       = $this->getUserProfileValue($userId);
 
@@ -570,8 +569,22 @@ class PlgSystemNewsletterLight extends JPlugin
 	private function computeSubject($subject)
 	{
 		$messagePlaceholders = array(
-			'[URL]' => $this->currentUri->toString(array('host', 'port')),
+			'[URL]'      => $this->currentUri->toString(array('host', 'port')),
 		);
+
+		// Check the receiver user
+		if (isset($this->user))
+		{
+			$messagePlaceholders['[USERNAME]'] = $this->user->username;
+			$messagePlaceholders['[NAME]']     = $this->user->name;
+		}
+
+		// Check the receiver user
+		if (isset($this->receiveruser))
+		{
+			$messagePlaceholders['[RECEIVER-USERNAME]'] = $this->receiveruser->username;
+			$messagePlaceholders['[RECEIVER-NAME]']     = $this->receiveruser->name;
+		}
 
 		if (isset($this->article->title))
 		{
