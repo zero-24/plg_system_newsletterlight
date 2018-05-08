@@ -611,11 +611,11 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// Set the default placeholders
 		$messagePlaceholders = array(
-			'[USERNAME]'          => $this->user->username,
-			'[NAME]'              => $this->user->name,
-			'[URL]'               => $this->currentUri->toString(array('host', 'port')),
-			'\\n'                 => "\n",
-			'<br>'                => "\n",
+			'[USERNAME]' => $this->user->username,
+			'[NAME]'     => $this->user->name,
+			'[URL]'      => $this->currentUri->toString(array('host', 'port')),
+			'\\n'        => '<br>',
+			"\n"         => '<br>',
 		);
 
 		// Check the receiver user
