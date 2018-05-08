@@ -195,7 +195,8 @@ class PlgSystemNewsletterLight extends JPlugin
 					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')
 				)
 			),
-			Factory::getUser($userId)->email
+			Factory::getUser($userId)->email,
+			true
 		);
 
 		if (!$sent)
@@ -316,24 +317,23 @@ class PlgSystemNewsletterLight extends JPlugin
 		$this->article           = $article; 
 		$this->mailtoUsergroupId = $this->params->get('usergroup', false);
 		$this->user              = Factory::getUser();
-		$ishtml = true;
 
 		$recipients = $this->getNewsletterRecipients();
 
 		// Send the mails to the groups.
 		if (isset($recipients['usergroup']))
 		{
-			$this->sendMailtoRecipients($recipients['usergroup'], $ishtml);
+			$this->sendMailtoRecipients($recipients['usergroup']);
 		}
 
 		if (isset($recipients['custom']))
 		{
-			$this->sendMailtoRecipients($recipients['custom'], $ishtml);
+			$this->sendMailtoRecipients($recipients['custom']);
 		}
 
 		if (isset($recipients['admin']))
 		{
-			$this->sendMailtoRecipients($recipients['admin'], $ishtml);
+			$this->sendMailtoRecipients($recipients['admin']);
 		}
 	}
 
@@ -341,11 +341,10 @@ class PlgSystemNewsletterLight extends JPlugin
 	 * This method retruns one array containing all email recipients
 	 *
 	 * @param   array    $recipients  The recipients of the messages
-	 * @param   boolean  $ishtml      If true the mail is set in html mode
 	 *
 	 * @since   1.0
 	 */
-	private function sendMailtoRecipients($recipients, $ishtml)
+	private function sendMailtoRecipients($recipients)
 	{
 		// Send the emails to the Super Users
 		foreach ($recipients as $recipient)
@@ -393,7 +392,7 @@ class PlgSystemNewsletterLight extends JPlugin
 
 			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId);
 
-			$sent = $this->sendMail($emailSubject, $emailBody, $email, $ishtml);
+			$sent = $this->sendMail($emailSubject, $emailBody, $email);
 
 			if (!$sent)
 			{
@@ -715,7 +714,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	 *
 	 * @since   1.0
 	 */
-	private function sendMail($emailSubject, $emailBody, $email, $ishtml = false)
+	private function sendMail($emailSubject, $emailBody, $email, $ishtml = true)
 	{
 		// Replace merge codes with their values
 		$mailFrom = Factory::getConfig()->get('mailfrom');
