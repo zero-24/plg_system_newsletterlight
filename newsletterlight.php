@@ -616,6 +616,7 @@ class PlgSystemNewsletterLight extends JPlugin
 			'[NAME]'              => $this->user->name,
 			'[URL]'               => $this->currentUri->toString(array('host', 'port')),
 			'\\n'                 => "\n",
+			'<br>'                => "\n",
 		);
 
 		// Check the receiver user
