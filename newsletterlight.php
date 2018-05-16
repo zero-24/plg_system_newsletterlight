@@ -388,8 +388,11 @@ class PlgSystemNewsletterLight extends JPlugin
 					)
 				);
 			}
-
-			$emailBody = $this->computeUnsubscribeLink($emailBody, $userId);
+			else
+			{
+				// compute the unsubscribe link when the user can unsubscribe at all
+				$emailBody = $this->computeUnsubscribeLink($emailBody, $userId);
+			}
 
 			$sent = $this->sendMail($emailSubject, $emailBody, $email);
 
