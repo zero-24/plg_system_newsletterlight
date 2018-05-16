@@ -195,8 +195,7 @@ class PlgSystemNewsletterLight extends JPlugin
 					Text::_('PLG_SYSTEM_NEWSLETTERLIGHT_BODY_UNSUBSRCRIBED_DEFAULT')
 				)
 			),
-			Factory::getUser($userId)->email,
-			true
+			Factory::getUser($userId)->email
 		);
 
 		if (!$sent)
@@ -714,7 +713,7 @@ class PlgSystemNewsletterLight extends JPlugin
 	 *
 	 * @since   1.0
 	 */
-	private function sendMail($emailSubject, $emailBody, $email, $ishtml = true)
+	private function sendMail($emailSubject, $emailBody, $email)
 	{
 		// Replace merge codes with their values
 		$mailFrom = Factory::getConfig()->get('mailfrom');
@@ -723,7 +722,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		try
 		{
 			$mailer = Factory::getMailer();
-			$mailer->isHtml($ishtml);
+			$mailer->isHtml(true);
 			$mailer->setSender(array($mailFrom, $fromName));
 			$mailer->addRecipient($email);
 			$mailer->setSubject($emailSubject);
