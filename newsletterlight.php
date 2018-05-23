@@ -114,12 +114,17 @@ class PlgSystemNewsletterLight extends JPlugin
 			return;
 		}
 
+		// Set the user object
+		$this->user = Factory::getUser($userId);
+
+		if ($this->user->guest)
+		{
+			return;
+		}
+
 		// The user want to unsubscribe
 		if ($unsubscribe === 1)
 		{
-			// Set the user object
-			$this->user = Factory::getUser($userId);
-
 			$return = $this->checkValidRequest($userId, $token);
 
 			if ($return === false)
