@@ -117,6 +117,7 @@ class PlgSystemNewsletterLight extends JPlugin
 		// Set the user object
 		$this->user = Factory::getUser($userId);
 
+		// Make sure the user is not a guest
 		if ($this->user->guest)
 		{
 			return;
