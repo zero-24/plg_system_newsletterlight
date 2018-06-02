@@ -643,8 +643,8 @@ class PlgSystemNewsletterLight extends JPlugin
 			$this->db->setQuery($category);
 
 			$categoryName = $this->db->loadResult();
-			$introtext    = str_replace('<br>', '<br />', $this->article->introtext);
-			$fulltext     = str_replace('<br>', '<br />', $this->article->fulltext);
+			$introtext    = strip_tags(str_replace('<br>', '<br />', $this->article->introtext), '<br><p>');
+			$fulltext     = strip_tags(str_replace('<br>', '<br />', $this->article->fulltext), '<br><p>');
 
 			// Define article introtext and fulltext
 			if ($fulltext === '')
