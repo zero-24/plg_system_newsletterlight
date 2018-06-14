@@ -282,6 +282,52 @@ class PlgSystemNewsletterLight extends JPlugin
 	}
 
 	/**
+	 * Before save content method
+	 * Article is passed by reference
+	 * Method is called right before the content is saved
+	 *
+	 * @param   string  $context  The context of the content passed to the plugin
+	 * @param   object  $content  A JTableContent object
+	 * @param   boolean $isNew    If the content has just been created
+	 *
+	 * @since   1.0
+	 */
+	public function onContentBeforeSave($context, $content, $isNew)
+	{
+		$this->isNewPublished = false;
+
+		// New items with state 1 (published) are ok other $isNew not!
+		if ($isNew === true && $content->state == '1')
+		{
+			$this->isNewPublished = true;
+
+			return true;
+		}
+
+		// Return when the article is new
+		if ($isNew === true)
+		{
+			return true;
+		}
+
+		$currentState = $this->db->getQuery(true)
+			->select($this->db->quoteName('state'))
+			->from($this->db->quoteName('#__content'))
+			->where($this->db->quoteName('id') . " = " . $content->id);
+		$this->db->setQuery($currentState);
+
+		$currentState = $this->db->loadResult();
+
+		if ($currentState != $content->state && $content->state == '1')
+		{
+			$this->isNewPublished = true;
+		}
+		
+		return true;
+		
+	}
+
+	/**
 	 * After save content method
 	 * Article is passed by reference, but after the save, so no changes will be saved.
 	 * Method is called right after the content is saved
@@ -296,6 +342,12 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	public function onContentAfterSave($context, $article, $isNew)
 	{
+		// If the item is not published no need to do anything.
+		if ($this->isNewPublished === false)
+		{
+			return true;
+		}
+
 		// Check this is a new article.
 		if (!$isNew)
 		{
