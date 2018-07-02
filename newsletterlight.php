@@ -294,6 +294,11 @@ class PlgSystemNewsletterLight extends JPlugin
 	 */
 	public function onContentBeforeSave($context, $content, $isNew)
 	{
+		if (!in_array($context, $this->supportedContext))
+		{
+			return true;
+		}
+
 		$this->isNewPublished = false;
 
 		// New items with state 1 (published) are ok other $isNew not!
@@ -344,12 +349,6 @@ class PlgSystemNewsletterLight extends JPlugin
 	{
 		// If the item is not published no need to do anything.
 		if ($this->isNewPublished === false)
-		{
-			return true;
-		}
-
-		// Check this is a new article.
-		if (!$isNew)
 		{
 			return true;
 		}
